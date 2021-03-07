@@ -22,8 +22,8 @@ const (
 func main() {
 	HandleRequest(context.Background(), &models.APIGatewayPayload{
 		QueryStringParameters: map[string]string{
-			"carrier":       "usps",
-			"tracking_code": "9400111899223817576195",
+			"carrier":       "fedex",
+			"tracking_code": "781911664789",
 		},
 	})
 	// lambda.Start(HandleRequest)
@@ -86,7 +86,6 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	}
 
 	shipmentManager := databaseConn.ShipmentManager()
-	trackingManager := databaseConn.TrackingEventManager()
 
 	//save shipment, do nothing on conflict
 	shipmentID, err := shipmentManager.InsertShipment(wonderShipment)
@@ -99,9 +98,10 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 
 	var eg errgroup.Group
 	for _, event := range wonderShipment.TrackingHistory {
-		//save tracking events, do nothing on conflict
+		//save tracking events async, do nothing on conflict
+		eventLocal := *event
 		eg.Go(func() error {
-			return trackingManager.InsertTrackingEvent(event, shipmentID)
+			return databaseConn.TrackingEventManager().InsertTrackingEvent(eventLocal, shipmentID)
 		})
 
 		if strings.ToLower(event.Status) == "transit" && event.StatusDate.Before(firstTransitTime) {
@@ -112,6 +112,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		}
 	}
 
+	//wait for tracking events to be saved
 	if err := eg.Wait(); err != nil {
 		//TODO: handle error response
 		return nil, err

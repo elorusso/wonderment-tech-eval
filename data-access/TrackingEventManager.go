@@ -17,10 +17,7 @@ type TrackingEventManager struct {
 	dbHelper *sql.DB
 }
 
-func (man TrackingEventManager) InsertTrackingEvent(event *integrations.TrackingEvent, shipmentID string) error {
-	if event == nil {
-		return errors.New("nil tracking event")
-	}
+func (man TrackingEventManager) InsertTrackingEvent(event integrations.TrackingEvent, shipmentID string) error {
 	if len(shipmentID) == 0 {
 		return errors.New("invalid shipment ID")
 	}
