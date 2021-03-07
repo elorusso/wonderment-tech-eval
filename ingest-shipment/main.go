@@ -12,6 +12,7 @@ import (
 	dataAccess "github.com/elorusso/wonderment-tech-eval/data-access"
 	"github.com/elorusso/wonderment-tech-eval/integrations"
 	"github.com/elorusso/wonderment-tech-eval/models"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -95,9 +96,13 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 
 	firstTransitTime := time.Now()
 	deliveryTime := time.Time{}
+
+	var eg errgroup.Group
 	for _, event := range wonderShipment.TrackingHistory {
 		//save tracking events, do nothing on conflict
-		trackingManager.InsertTrackingEvent(event, shipmentID)
+		eg.Go(func() error {
+			return trackingManager.InsertTrackingEvent(event, shipmentID)
+		})
 
 		if strings.ToLower(event.Status) == "transit" && event.StatusDate.Before(firstTransitTime) {
 			firstTransitTime = event.StatusDate
@@ -105,6 +110,11 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 			//assuming there is only one delivery event
 			deliveryTime = event.StatusDate
 		}
+	}
+
+	if err := eg.Wait(); err != nil {
+		//TODO: handle error response
+		return nil, err
 	}
 
 	//calculate time in transit, if delivered
