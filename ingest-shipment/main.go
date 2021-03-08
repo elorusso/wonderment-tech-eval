@@ -63,14 +63,15 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	wonderShipment, err := wondermentAPI.LimitedTrackingSerice(params.Carrier, params.TrackingCode)
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
 
 	databaseConn, err := dataAccess.NewSQLConnection()
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
+	defer databaseConn.Destroy()
 
 	shipmentManager := databaseConn.ShipmentManager()
 
@@ -78,7 +79,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	shipmentID, err := shipmentManager.InsertShipment(wonderShipment)
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
 
 	firstTransitTime := time.Now()
@@ -103,7 +104,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	//wait for tracking events to be saved
 	if err := eg.Wait(); err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
 
 	//calculate time in transit, if delivered
@@ -113,7 +114,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		err = shipmentManager.UpdateTransitTimeForShipment(shipmentID, int(timeInTransit/1000000)) //save in milliseconds
 		if err != nil {
 			fmt.Println(err)
-			return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+			return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 		}
 	}
 
@@ -130,17 +131,35 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	body, err := json.Marshal(successResponse)
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
 
 	return &models.APIGatewayResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(body),
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}, nil
 }
 
 func errorResponse(code int, err error) (*models.APIGatewayResponse, error) {
+	body := &struct {
+		Message string `json:"message"`
+	}{
+		Message: err.Error(),
+	}
+
+	bodyData, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
 	return &models.APIGatewayResponse{
 		StatusCode: code,
-	}, err
+		Body:       string(bodyData),
+		Headers: map[string]string{
+			"content-type": "application/json",
+		},
+	}, nil
 }

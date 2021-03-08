@@ -34,13 +34,14 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	databaseConn, err := dataAccess.NewSQLConnection()
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
+	defer databaseConn.Destroy()
 
 	avgTimeInTransit, err := databaseConn.ShipmentManager().GetAverageTimeInTransit(carrier)
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
 
 	//create response
@@ -54,7 +55,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	body, err := json.Marshal(successResponse)
 	if err != nil {
 		fmt.Println(err)
-		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Server Error"))
 	}
 
 	//just some info
@@ -65,11 +66,29 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	return &models.APIGatewayResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(body),
+		Headers: map[string]string{
+			"content-type": "application/json",
+		},
 	}, nil
 }
 
 func errorResponse(code int, err error) (*models.APIGatewayResponse, error) {
+	body := &struct {
+		Message string `json:"message"`
+	}{
+		Message: err.Error(),
+	}
+
+	bodyData, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
 	return &models.APIGatewayResponse{
 		StatusCode: code,
-	}, err
+		Body:       string(bodyData),
+		Headers: map[string]string{
+			"content-type": "application/json",
+		},
+	}, nil
 }
