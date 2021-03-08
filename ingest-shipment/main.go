@@ -42,19 +42,17 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		}
 	} else if payload.QueryStringParameters != nil {
 		//check query params
-		carrier, ok := payload.QueryStringParameters["carrier"]
-		if !ok || len(carrier) == 0 {
-			return errorResponse(http.StatusBadRequest, errors.New("Carrier paramater is required"))
-		}
-		trackingCode, ok := payload.QueryStringParameters["tracking_code"]
-		if !ok || len(trackingCode) == 0 {
-			return errorResponse(http.StatusBadRequest, errors.New("Tracking code parameter is required"))
-		}
-
-		params.Carrier = carrier
-		params.TrackingCode = trackingCode
+		params.Carrier = payload.QueryStringParameters["carrier"]
+		params.TrackingCode = payload.QueryStringParameters["tracking_code"]
 	} else {
 		return errorResponse(http.StatusBadRequest, errors.New("Required parameters missing"))
+	}
+
+	if len(params.Carrier) == 0 {
+		return errorResponse(http.StatusBadRequest, errors.New("Carrier paramater is required"))
+	}
+	if len(params.TrackingCode) == 0 {
+		return errorResponse(http.StatusBadRequest, errors.New("Tracking code parameter is required"))
 	}
 
 	//fetch shipment info from Wonderment
