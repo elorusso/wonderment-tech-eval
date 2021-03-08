@@ -30,6 +30,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		}
 	}
 
+	//connect to db
 	databaseConn, err := dataAccess.NewSQLConnection()
 	if err != nil {
 		fmt.Println(err)
@@ -42,6 +43,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
 	}
 
+	//create response
 	successResponse := &struct {
 		AverageTimeInTransit int    `json:"average_time_in_transit"`
 		Carrier              string `json:"carrier,omitempty"`

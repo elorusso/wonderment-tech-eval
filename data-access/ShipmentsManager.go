@@ -121,6 +121,7 @@ func (man ShipmentsManager) UpdateTransitTimeForShipment(shipmentID string, tran
 
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
+	//build sql
 	sql, args, err := psql.Update(shipmentsTableName).Set("time_in_transit", transitTime).Where(sq.Eq{"shipment_id": shipmentID}).ToSql()
 	if err != nil {
 		fmt.Println(err)
@@ -155,6 +156,7 @@ func (man ShipmentsManager) GetAverageTimeInTransit(carrier string) (int, error)
 
 	fmt.Println(sql, args)
 
+	//execute
 	rows, err := man.dbHelper.Query(sql, args...)
 	if err != nil {
 		fmt.Println(err)

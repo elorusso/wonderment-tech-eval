@@ -22,6 +22,7 @@ func (man TrackingEventManager) InsertTrackingEvent(event integrations.TrackingE
 		return errors.New("invalid shipment ID")
 	}
 
+	//avoid seg faults
 	if event.Location == nil {
 		event.Location = &integrations.Address{}
 	}
@@ -31,6 +32,7 @@ func (man TrackingEventManager) InsertTrackingEvent(event integrations.TrackingE
 
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
+	//build sql
 	sql, args, err := psql.Insert(trackingEventTableName).
 		Columns(
 			"event_id",
@@ -67,6 +69,7 @@ func (man TrackingEventManager) InsertTrackingEvent(event integrations.TrackingE
 
 	fmt.Println(sql, args)
 
+	//execute
 	_, err = man.dbHelper.Query(sql, args...)
 	if err != nil {
 		fmt.Println(err)
