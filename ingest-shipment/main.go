@@ -122,10 +122,26 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		}
 	}
 
+	//just some info
 	executionTime := time.Now().Sub(startTime)
 	fmt.Printf("ExecutionTime: %s\n", executionTime)
 	fmt.Println("ShipmentID: " + shipmentID)
-	return nil, nil
+
+	successResponse := &struct {
+		Success bool `json:"success"`
+	}{
+		Success: true,
+	}
+	body, err := json.Marshal(successResponse)
+	if err != nil {
+		fmt.Println(err)
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
+	}
+
+	return &models.APIGatewayResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(body),
+	}, nil
 }
 
 func errorResponse(code int, err error) (*models.APIGatewayResponse, error) {
