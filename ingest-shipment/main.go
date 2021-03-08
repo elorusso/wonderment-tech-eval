@@ -43,31 +43,23 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 		//check body
 		err := json.Unmarshal([]byte(payload.Body), params)
 		if err != nil {
-			return &models.APIGatewayResponse{
-				StatusCode: http.StatusBadRequest,
-			}, err
+			return errorResponse(http.StatusBadRequest, err)
 		}
 	} else if payload.QueryStringParameters != nil {
 		//check query params
 		carrier, ok := payload.QueryStringParameters["carrier"]
 		if !ok || len(carrier) == 0 {
-			return &models.APIGatewayResponse{
-				StatusCode: http.StatusBadRequest,
-			}, errors.New("Carrier paramater is required")
+			return errorResponse(http.StatusBadRequest, errors.New("Carrier paramater is required"))
 		}
 		trackingCode, ok := payload.QueryStringParameters["tracking_code"]
 		if !ok || len(trackingCode) == 0 {
-			return &models.APIGatewayResponse{
-				StatusCode: http.StatusBadRequest,
-			}, errors.New("Tracking code parameter is required")
+			return errorResponse(http.StatusBadRequest, errors.New("Tracking code parameter is required"))
 		}
 
 		params.Carrier = carrier
 		params.TrackingCode = trackingCode
 	} else {
-		return &models.APIGatewayResponse{
-			StatusCode: http.StatusBadRequest,
-		}, errors.New("Required parameters missing")
+		return errorResponse(http.StatusBadRequest, errors.New("Required parameters missing"))
 	}
 
 	//fetch shipment info from Wonderment
@@ -75,14 +67,14 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 
 	wonderShipment, err := wondermentAPI.LimitedTrackingSerice(params.Carrier, params.TrackingCode)
 	if err != nil {
-		return &models.APIGatewayResponse{
-			StatusCode: http.StatusInternalServerError,
-		}, err
+		fmt.Println(err)
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
 	}
 
 	databaseConn, err := dataAccess.NewSQLConnection()
 	if err != nil {
-		return nil, err
+		fmt.Println(err)
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
 	}
 
 	shipmentManager := databaseConn.ShipmentManager()
@@ -90,7 +82,8 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	//save shipment, do nothing on conflict
 	shipmentID, err := shipmentManager.InsertShipment(wonderShipment)
 	if err != nil {
-		return nil, err
+		fmt.Println(err)
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
 	}
 
 	firstTransitTime := time.Now()
@@ -114,8 +107,8 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 
 	//wait for tracking events to be saved
 	if err := eg.Wait(); err != nil {
-		//TODO: handle error response
-		return nil, err
+		fmt.Println(err)
+		return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
 	}
 
 	//calculate time in transit, if delivered
@@ -124,14 +117,19 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 
 		err = shipmentManager.UpdateTransitTimeForShipment(shipmentID, int(timeInTransit/1000000)) //save in milliseconds
 		if err != nil {
-			return nil, err
+			fmt.Println(err)
+			return errorResponse(http.StatusInternalServerError, errors.New("Internal Error"))
 		}
 	}
-
-	//TODO: update error returns
 
 	executionTime := time.Now().Sub(startTime)
 	fmt.Printf("ExecutionTime: %s\n", executionTime)
 	fmt.Println("ShipmentID: " + shipmentID)
 	return nil, nil
+}
+
+func errorResponse(code int, err error) (*models.APIGatewayResponse, error) {
+	return &models.APIGatewayResponse{
+		StatusCode: code,
+	}, err
 }
