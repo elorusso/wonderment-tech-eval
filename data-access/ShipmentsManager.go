@@ -37,6 +37,7 @@ func (man ShipmentsManager) InsertShipment(shipment *integrations.WondermentShip
 		originalETAString = &temp
 	}
 
+	//avoid seg faults
 	if shipment.AddressFrom == nil {
 		shipment.AddressFrom = &integrations.Address{}
 	}
@@ -99,6 +100,7 @@ func (man ShipmentsManager) InsertShipment(shipment *integrations.WondermentShip
 
 	var shipmentID string
 
+	//read shipment_id
 	if rows.Next() {
 		err = rows.Scan(&shipmentID)
 		if err != nil {
@@ -134,4 +136,42 @@ func (man ShipmentsManager) UpdateTransitTimeForShipment(shipmentID string, tran
 	}
 
 	return nil
+}
+
+func (man ShipmentsManager) GetAverageTimeInTransit(carrier string) (int, error) {
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	//build sql query
+	builder := psql.Select("ROUND(AVG(time_in_transit))").From(shipmentsTableName)
+
+	if len(carrier) != 0 {
+		builder = builder.Where(sq.Eq{"carrier": carrier})
+	}
+
+	sql, args, err := builder.ToSql()
+	if err != nil {
+		return 0, err
+	}
+
+	fmt.Println(sql, args)
+
+	rows, err := man.dbHelper.Query(sql, args...)
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+
+	averageTimeInTransit := 0
+	if rows.Next() {
+		err = rows.Scan(&averageTimeInTransit)
+		if err != nil {
+			return 0, err
+		}
+	} else if rows.Err() != nil {
+		return 0, err
+	} else {
+		return 0, errors.New("Failed to scan response")
+	}
+
+	return averageTimeInTransit, nil
 }
