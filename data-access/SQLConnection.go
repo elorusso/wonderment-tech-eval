@@ -32,6 +32,10 @@ func NewSQLConnection() (*SQLConnection, error) {
 	}, nil
 }
 
+func (conn *SQLConnection) Destroy() {
+	conn.dbHelper.Close()
+}
+
 func (conn SQLConnection) ShipmentManager() *ShipmentsManager {
 	return &ShipmentsManager{
 		dbHelper: conn.dbHelper,

@@ -97,6 +97,7 @@ func (man ShipmentsManager) InsertShipment(shipment *integrations.WondermentShip
 		fmt.Println(err)
 		return "", err
 	}
+	defer rows.Close()
 
 	var shipmentID string
 
@@ -130,11 +131,12 @@ func (man ShipmentsManager) UpdateTransitTimeForShipment(shipmentID string, tran
 
 	fmt.Println(sql, args)
 
-	_, err = man.dbHelper.Query(sql, args...)
+	rows, err := man.dbHelper.Query(sql, args...)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+	defer rows.Close()
 
 	return nil
 }
@@ -162,6 +164,7 @@ func (man ShipmentsManager) GetAverageTimeInTransit(carrier string) (int, error)
 		fmt.Println(err)
 		return 0, err
 	}
+	defer rows.Close()
 
 	averageTimeInTransit := 0
 	if rows.Next() {

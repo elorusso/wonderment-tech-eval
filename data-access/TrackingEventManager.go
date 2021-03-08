@@ -70,11 +70,12 @@ func (man TrackingEventManager) InsertTrackingEvent(event integrations.TrackingE
 	fmt.Println(sql, args)
 
 	//execute
-	_, err = man.dbHelper.Query(sql, args...)
+	rows, err := man.dbHelper.Query(sql, args...)
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+	defer rows.Close()
 
 	return nil
 }
