@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	wondermentBaseURL = "https://wrqnmf9e62.execute-api.us-east-1.amazonaws.com/Prod"
+	wondermentBaseURL = "https://wrqnmf9e62.execute-api.us-east-1.amazonaws.com"
 )
 
 func main() {
