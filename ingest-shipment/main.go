@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	dataAccess "github.com/elorusso/wonderment-tech-eval/data-access"
 	"github.com/elorusso/wonderment-tech-eval/integrations"
 	"github.com/elorusso/wonderment-tech-eval/models"
@@ -20,13 +21,7 @@ const (
 )
 
 func main() {
-	HandleRequest(context.Background(), &models.APIGatewayPayload{
-		QueryStringParameters: map[string]string{
-			"carrier":       "fedex",
-			"tracking_code": "781911664789",
-		},
-	})
-	// lambda.Start(HandleRequest)
+	lambda.Start(HandleRequest)
 }
 
 func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*models.APIGatewayResponse, error) {

@@ -8,18 +8,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	dataAccess "github.com/elorusso/wonderment-tech-eval/data-access"
 	"github.com/elorusso/wonderment-tech-eval/models"
 )
 
 func main() {
-	HandleRequest(context.Background(), &models.APIGatewayPayload{
-		QueryStringParameters: map[string]string{
-			"carrier": "fedex",
-		},
-	})
-	// lambd
-	// lambda.Start(HandleRequest)
+	// lambda
+	lambda.Start(HandleRequest)
 }
 
 func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*models.APIGatewayResponse, error) {
@@ -62,6 +58,7 @@ func HandleRequest(ctx context.Context, payload *models.APIGatewayPayload) (*mod
 	//just some info
 	executionTime := time.Now().Sub(startTime)
 	fmt.Printf("ExecutionTime: %s\n", executionTime)
+	fmt.Printf("Average Transit Time: %v\n", avgTimeInTransit)
 
 	return &models.APIGatewayResponse{
 		StatusCode: http.StatusOK,
