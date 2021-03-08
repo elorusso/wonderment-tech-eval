@@ -25,6 +25,9 @@ func (man TrackingEventManager) InsertTrackingEvent(event integrations.TrackingE
 	if event.Location == nil {
 		event.Location = &integrations.Address{}
 	}
+	if event.SubStatus == nil {
+		event.SubStatus = &integrations.SubStatus{}
+	}
 
 	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
